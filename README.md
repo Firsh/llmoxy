@@ -45,6 +45,7 @@ curl -sSL https://raw.githubusercontent.com/Firsh/llmoxy/main/install.sh | bash
 ```
 
 This one-liner will:
+
 - Clone the repository to `~/llmoxy`
 - Set up permissions and generate aliases
 - Add aliases to your shell config
@@ -164,6 +165,14 @@ llmoxy --run qwen
 ```
 
 **Note**: Aliases automatically update when you modify `config.yaml` and start the proxy or run `llmoxy --generate-aliases`.
+
+#### Direct API Access (No Proxy Required)
+
+For users with a Moonshot AI account, there's also an optional, direct connection option (a simple alias) that bypasses the proxy (and llmoxy) entirely:
+
+- `kimi-td` - Access Kimi K2 Turbo directly via Moonshot's Anthropic-compatible endpoint
+
+This direct approach uses Moonshot's native `/anthropic` endpoint, requires only your `MOONSHOT_API_KEY`, and provides faster startup since it skips Docker and LiteLLM entirely.
 
 #### Checking Status
 

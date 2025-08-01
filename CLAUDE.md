@@ -49,6 +49,20 @@ dsr1                    # Alias for llmoxy --run dsr1
 qwen                    # Alias for llmoxy --run qwen
 ```
 
+### Direct API Access (No Proxy)
+
+For users with a Moonshot AI account, you can bypass the LiteLLM proxy entirely and connect directly to Moonshot's Anthropic-compatible endpoint:
+
+```bash
+kimi-td                 # Direct access to Kimi K2 Turbo via Moonshot's /anthropic endpoint
+```
+
+This approach:
+- Uses Moonshot's native Anthropic-compatible API format (`https://api.moonshot.ai/anthropic`)
+- Requires only `MOONSHOT_API_KEY` in your `.env` file
+- Bypasses Docker and LiteLLM completely for faster startup
+- Provides a more direct connection with potentially better performance
+
 ### Development and Debugging
 
 ```bash
