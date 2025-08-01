@@ -18,13 +18,14 @@ alias llmoxy-logs='llmoxy --logs'
 alias llmoxy-restart='llmoxy --restart'
 alias llmoxy-aliases='llmoxy --generate-aliases'
 
-# Kimi Turbo Direct Moonshot Anthropic endpoint (bypasses LiteLLM)
-alias kimi-td='(cd "$LLMOXY_DIR" && source .env 2>/dev/null; ANTHROPIC_AUTH_TOKEN="$MOONSHOT_API_KEY" ANTHROPIC_BASE_URL="https://api.moonshot.ai/anthropic" ANTHROPIC_MODEL="kimi-k2-turbo-preview" claude)'
+# Direct Moonshot Anthropic endpoint aliases (bypass LiteLLM)
+alias kimi='(cd "$LLMOXY_DIR" && source .env 2>/dev/null; ANTHROPIC_AUTH_TOKEN="$MOONSHOT_API_KEY" ANTHROPIC_BASE_URL="https://api.moonshot.ai/anthropic" ANTHROPIC_MODEL="kimi-k2-0711-preview" claude)'
+
+alias kimi-turbo='(cd "$LLMOXY_DIR" && source .env 2>/dev/null; ANTHROPIC_AUTH_TOKEN="$MOONSHOT_API_KEY" ANTHROPIC_BASE_URL="https://api.moonshot.ai/anthropic" ANTHROPIC_MODEL="kimi-k2-turbo-preview" claude)'
 
 # BEGIN AUTO-GENERATED ALIASES
 # Dynamic model aliases are automatically updated from config.yaml
-alias kimi='llmoxy --run kimi'
-alias kimi-turbo='llmoxy --run kimi-turbo'
+alias kimi-or='llmoxy --run kimi-or'
 alias dsr1='llmoxy --run dsr1'
 alias qwen='llmoxy --run qwen'
 # END AUTO-GENERATED ALIASES

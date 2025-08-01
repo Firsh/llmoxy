@@ -1,6 +1,6 @@
 model_list:
-  # Kimi K2
-  - model_name: kimi
+  # Kimi K2 via OpenRouter
+  - model_name: kimi-or
     litellm_params:
       model: openrouter/moonshotai/kimi-k2
       api_key: os.environ/OPENROUTER_API_KEY
@@ -14,12 +14,6 @@ model_list:
           # Restrict to specific providers only (use provider slugs)
           only: ["fireworks"]
   
-  # Kimi K2 turbo preview straight from Moonshot
-  - model_name: kimi-turbo
-    litellm_params:
-      model: moonshot/kimi-k2-turbo-preview
-      api_key: os.environ/MOONSHOT_API_KEY
-
   # DeepSeek R1 (2025-05-28)
   - model_name: dsr1
     litellm_params:

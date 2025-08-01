@@ -2,7 +2,7 @@
 # LLM Proxy CLI Utility
 # Interface for managing LiteLLM proxy and Claude Code integration
 
-VERSION="1.1.0"
+VERSION="1.2.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 get_model_names_from_config() {
@@ -79,16 +79,14 @@ show_help() {
     echo "  --list-models           List all configured models"
     echo ""
     echo "Examples:"
-    echo "  llmoxy --start                # Start the proxy"
-    echo "  llmoxy --run kimi            # Run Claude Code with Kimi K2"
-    echo "  llmoxy --run kimi-turbo      # Run Claude Code with Kimi Turbo"
+    echo "  llmoxy --start               # Start the proxy"
+    echo "  llmoxy --run kimi-or         # Run Claude Code with Kimi K2 via OpenRouter"
     echo "  llmoxy --run dsr1            # Run Claude Code with DeepSeek R1"
     echo "  llmoxy --run qwen            # Run Claude Code with Qwen3 Coder"
     echo "  llmoxy --status              # Check if proxy is running"
     echo ""
     echo "Convenience aliases available:"
-    echo "  kimi           # Equivalent to: llmoxy --run kimi"
-    echo "  kimi-turbo     # Equivalent to: llmoxy --run kimi-turbo"
+    echo "  kimi-or        # Equivalent to: llmoxy --run kimi-or"
     echo "  dsr1           # Equivalent to: llmoxy --run dsr1"
     echo "  qwen           # Equivalent to: llmoxy --run qwen"
 }

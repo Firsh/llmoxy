@@ -146,33 +146,30 @@ Model aliases are automatically generated from your `config.yaml` file and becom
 - You run `llmoxy --generate-aliases` manually
 - Auto-start detects config changes when using a model alias
 
-**Current aliases** (based on your config.yaml):
+**Primary Kimi Models (Direct Moonshot Access - Recommended):**
 
-- `kimi` - Runs `llmoxy --run kimi`
-- `kimi-turbo` - Runs `llmoxy --run kimi-turbo`
+For users with a Moonshot AI account, the main Kimi models now use direct connection for superior caching performance\*:
+
+- `kimi` - Direct access to Kimi K2 via Moonshot's Anthropic-compatible endpoint
+- `kimi-turbo` - Direct access to Kimi K2 Turbo Preview via Moonshot's Anthropic-compatible endpoint
+
+**\*Why Direct Access?** Moonshot's caching works significantly better when connecting directly to their `/anthropic` endpoint rather than through OpenRouter or LiteLLM, allegedy, confirmation needed! These aliases bypass Docker and proxy layers entirely.
+
+**Proxy-based aliases** (from config.yaml):
+
+- `kimi-or` - Runs `llmoxy --run kimi-or` (Kimi K2 via OpenRouter - fallback option)
 - `dsr1` - Runs `llmoxy --run dsr1`
 - `qwen` - Runs `llmoxy --run qwen`
-
-They were designed to mimic how you start Claude (`claude`) so they are just commands in the terminal (these auto-start proxy if needed).
 
 **Manual command equivalents:**
 
 ```bash
-llmoxy --run kimi
-llmoxy --run kimi-turbo
+llmoxy --run kimi-or
 llmoxy --run dsr1
 llmoxy --run qwen
 ```
 
-**Note**: Aliases automatically update when you modify `config.yaml` and start the proxy or run `llmoxy --generate-aliases`.
-
-#### Direct API Access (No Proxy Required)
-
-For users with a Moonshot AI account, there's also an optional, direct connection option (a simple alias) that bypasses the proxy (and llmoxy) entirely:
-
-- `kimi-td` - Access Kimi K2 Turbo directly via Moonshot's Anthropic-compatible endpoint
-
-This direct approach uses Moonshot's native `/anthropic` endpoint, requires only your `MOONSHOT_API_KEY`, and provides faster startup since it skips Docker and LiteLLM entirely.
+**Note**: If you don't have a Moonshot account, use `kimi-or` which routes through OpenRouter instead of the direct `kimi` alias.
 
 #### Checking Status
 
