@@ -1,0 +1,57 @@
+model_list:
+  # Kimi K2
+  - model_name: kimi
+    litellm_params:
+      model: openrouter/moonshotai/kimi-k2
+      api_key: os.environ/OPENROUTER_API_KEY
+      # App identification headers
+      extra_headers:
+        "HTTP-Referer": "https://github.com/Firsh/llmoxy"
+        "X-Title": "llmoxy"
+      # OpenRouter provider routing via request body
+      extra_body:
+        provider:
+          # Restrict to specific providers only (use provider slugs)
+          only: ["fireworks"]
+  
+  # Kimi K2 turbo preview straight from Moonshot
+  - model_name: kimi-turbo
+    litellm_params:
+      model: moonshot/kimi-k2-turbo-preview
+      api_key: os.environ/MOONSHOT_API_KEY
+
+  # DeepSeek R1 (2025-05-28)
+  - model_name: dsr1
+    litellm_params:
+      model: openrouter/deepseek/deepseek-r1-0528
+      api_key: os.environ/OPENROUTER_API_KEY  
+      # App identification headers
+      extra_headers:
+        "HTTP-Referer": "https://github.com/Firsh/llmoxy"
+        "X-Title": "llmoxy"
+      # OpenRouter provider routing via request body
+      extra_body:
+        provider:
+          order: ["lambda", "novita", "gmicloud"]
+          allow_fallbacks: false
+
+  # Qwen3 Coder 
+  - model_name: qwen
+    litellm_params:
+      model: openrouter/qwen/qwen3-coder
+      api_key: os.environ/OPENROUTER_API_KEY  
+      # App identification headers
+      extra_headers:
+        "HTTP-Referer": "https://github.com/Firsh/llmoxy"
+        "X-Title": "llmoxy"
+      # OpenRouter provider routing via request body
+      extra_body:
+        provider:
+          order: ["deepinfra", "gmicloud"]
+          allow_fallbacks: false
+
+general_settings:
+  # master_key: "sk-1234" # Disabled for easy testing
+  
+litellm_settings:
+  set_verbose: true

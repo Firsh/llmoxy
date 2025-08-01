@@ -1,0 +1,16 @@
+# Environment files
+.env
+
+# Docker
+.docker/
+
+# Claude
+.claude/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp

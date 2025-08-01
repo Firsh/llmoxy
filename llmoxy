@@ -1,0 +1,386 @@
+#!/bin/bash
+# LLM Proxy CLI Utility
+# Interface for managing LiteLLM proxy and Claude Code integration
+
+VERSION="1.0.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+get_model_names_from_config() {
+    grep "model_name:" "$SCRIPT_DIR/config.yaml" 2>/dev/null | sed 's/.*model_name: *//'
+}
+
+# Read default model from config.yaml dynamically
+default_model=$(get_model_names_from_config | head -1 || echo "kimi")
+DEFAULT_MODEL="$default_model"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+GRAY='\033[0;90m'
+NC='\033[0m' # No Color
+
+should_regenerate_aliases() {
+    local config_file="$SCRIPT_DIR/config.yaml"
+    local aliases_file="$SCRIPT_DIR/aliases.sh"
+    
+    # If config.yaml is newer than aliases.sh, regenerate
+    if [ "$config_file" -nt "$aliases_file" ]; then
+        return 0
+    fi
+    
+    # Check if aliases.sh contains the auto-generated markers
+    if ! grep -q "# BEGIN AUTO-GENERATED ALIASES" "$aliases_file" 2>/dev/null; then
+        return 0
+    fi
+    
+    return 1
+}
+
+wait_for_proxy_health() {
+    local max_wait="${1:-10}"
+    local context="${2:-Proxy}"
+    
+    echo -e "${BLUE}⏳ Waiting for proxy to be ready...${NC}"
+    local wait_time=0
+    
+    while [ $wait_time -lt $max_wait ]; do
+        if curl -s http://localhost:4000/health/liveliness > /dev/null 2>&1; then
+            echo -e "\r${GREEN}✅ $context is ready!${NC}                    "
+            return 0
+        fi
+        sleep 1
+        wait_time=$((wait_time + 1))
+        printf "\r${BLUE}  ... checking health (${wait_time}/${max_wait})${NC}"
+    done
+    
+    echo -e "\r${RED}❌ $context failed health check after ${max_wait}s${NC}    "
+    return 1
+}
+
+show_help() {
+    echo "llmoxy - LiteLLM Proxy Manager for Claude Code"
+    echo ""
+    echo "Usage: llmoxy [COMMAND] [OPTIONS]"
+    echo ""
+    echo "Commands:"
+    echo "  --start, -s          Start the LiteLLM proxy service"
+    echo "  --stop, -x           Stop the LiteLLM proxy service"  
+    echo "  --restart, -r        Restart the LiteLLM proxy service"
+    echo "  --status, -t         Show proxy status and available models"
+    echo "  --logs, -l           Show proxy logs"
+    echo "  --generate-aliases   Generate dynamic aliases from config.yaml"
+    echo "  --version, -v        Show version information"
+    echo "  --help, -h           Show this help message"
+    echo ""
+    echo "Model Commands:"
+    echo "  --run MODEL, -m MODEL    Start Claude Code with specific model"
+    echo "  --list-models           List all configured models"
+    echo ""
+    echo "Examples:"
+    echo "  llmoxy --start                # Start the proxy"
+    echo "  llmoxy --run kimi            # Run Claude Code with Kimi K2"
+    echo "  llmoxy --run kimi-turbo      # Run Claude Code with Kimi Turbo"
+    echo "  llmoxy --run dsr1            # Run Claude Code with DeepSeek R1"
+    echo "  llmoxy --run qwen            # Run Claude Code with Qwen3 Coder"
+    echo "  llmoxy --status              # Check if proxy is running"
+    echo ""
+    echo "Convenience aliases available:"
+    echo "  kimi           # Equivalent to: llmoxy --run kimi"
+    echo "  kimi-turbo     # Equivalent to: llmoxy --run kimi-turbo"
+    echo "  dsr1           # Equivalent to: llmoxy --run dsr1"
+    echo "  qwen           # Equivalent to: llmoxy --run qwen"
+}
+
+proxy_start() {
+    echo -e "${BLUE}🚀 Starting LiteLLM proxy...${NC}"
+    cd "$SCRIPT_DIR"
+    
+    # Check if aliases need to be regenerated
+    if should_regenerate_aliases; then
+        echo -e "${BLUE}🔄 Updating aliases from config.yaml...${NC}"
+        generate_aliases >/dev/null
+    fi
+    
+    docker compose up -d
+    if [ $? -eq 0 ]; then
+        # Wait for the service to be healthy before declaring success
+        if wait_for_proxy_health 30 "LiteLLM proxy"; then
+            echo -e "${BLUE}📡 Access proxy at: http://localhost:4000${NC}"
+            return 0
+        else
+            echo -e "${RED}❌ Proxy containers started but service failed to become healthy${NC}"
+            echo -e "${YELLOW}💡 Check logs with: llmoxy --logs${NC}"
+            return 1
+        fi
+    else
+        echo -e "${RED}❌ Failed to start LiteLLM proxy${NC}"
+        return 1
+    fi
+}
+
+proxy_stop() {
+    echo -e "${YELLOW}🛑 Stopping LiteLLM proxy...${NC}"
+    cd "$SCRIPT_DIR"
+    docker compose down
+    echo -e "${GREEN}✅ LiteLLM proxy stopped${NC}"
+}
+
+proxy_restart() {
+    echo -e "${YELLOW}🔄 Restarting LiteLLM proxy...${NC}"
+    cd "$SCRIPT_DIR"
+    
+    # Stop the service first
+    echo -e "${BLUE}🛑 Stopping proxy...${NC}"
+    docker compose down
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Failed to stop LiteLLM proxy${NC}"
+        return 1
+    fi
+    
+    # Start the service fresh
+    echo -e "${BLUE}🚀 Starting proxy...${NC}"
+    docker compose up -d
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Failed to start LiteLLM proxy${NC}"
+        return 1
+    fi
+    
+    # Wait for the service to be healthy
+    if wait_for_proxy_health 30 "LiteLLM proxy"; then
+        echo -e "${BLUE}📡 Access proxy at: http://localhost:4000${NC}"
+        return 0
+    else
+        echo -e "${YELLOW}💡 Check logs with: llmoxy --logs${NC}"
+        return 1
+    fi
+}
+
+proxy_status() {
+    echo -e "${BLUE}🔍 Checking proxy status...${NC}"
+    if curl -s http://localhost:4000/health/liveliness > /dev/null 2>&1; then
+        echo -e "${GREEN}✅ LiteLLM proxy is running on localhost:4000${NC}"
+        echo -e "${BLUE}📋 Available models (from LiteLLM):${NC}"
+        curl -s http://localhost:4000/models 2>/dev/null | grep -o '"id":"[^"]*"' | sed 's/"id":"//' | sed 's/"//' | while read -r model; do
+            local full_name=$(get_full_model_name "$model")
+            if [ -n "$full_name" ]; then
+                echo "  - $model ($full_name)"
+            else
+                echo "  - $model"
+            fi
+        done
+    else
+        echo -e "${RED}❌ LiteLLM proxy is not running${NC}"
+        echo -e "${YELLOW}💡 Start it with: llmoxy --start${NC}"
+        # Show models from config.yaml since proxy is not running
+        list_models
+        return 1
+    fi
+}
+
+proxy_logs() {
+    echo -e "${BLUE}📜 LiteLLM proxy logs:${NC}"
+    cd "$SCRIPT_DIR"
+    docker compose logs -f litellm
+}
+
+list_models() {
+    echo -e "${BLUE}📋 Configured models:${NC}"
+    local models=$(get_model_names_from_config)
+    if [ -n "$models" ]; then
+        echo "$models" | while read -r model; do
+            local full_name=$(get_full_model_name "$model")
+            if [ -n "$full_name" ]; then
+                echo "  - $model ($full_name)"
+            else
+                echo "  - $model"
+            fi
+        done
+    else
+        echo -e "${YELLOW}⚠️  No models found in config.yaml${NC}"
+    fi
+}
+
+get_full_model_name() {
+    local nickname="$1"
+    local full_name=""
+    
+    # Parse YAML manually to find the model
+    local in_target_model=false
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^[[:space:]]*-[[:space:]]*model_name:[[:space:]]*${nickname}[[:space:]]*$ ]]; then
+            in_target_model=true
+        elif [[ "$line" =~ ^[[:space:]]*-[[:space:]]*model_name: ]] && [ "$in_target_model" = true ]; then
+            # Hit another model, stop looking
+            break
+        elif [ "$in_target_model" = true ] && [[ "$line" =~ ^[[:space:]]*model:[[:space:]]*(.*) ]]; then
+            full_name="${BASH_REMATCH[1]}"
+            break
+        fi
+    done < "$SCRIPT_DIR/config.yaml"
+    
+    echo "$full_name"
+}
+
+
+generate_aliases() {
+    local aliases_file="$SCRIPT_DIR/aliases.sh"
+    local temp_file=$(mktemp)
+    local start_marker="# BEGIN AUTO-GENERATED ALIASES"
+    local end_marker="# END AUTO-GENERATED ALIASES"
+    
+    # Generate the auto-generated section
+    cat > "$temp_file" << EOF
+$start_marker
+# Dynamic model aliases are automatically updated from config.yaml
+EOF
+
+    # Generate model aliases from config.yaml
+    get_model_names_from_config | while read -r model; do
+        echo "alias $model='llmoxy --run $model'" >> "$temp_file"
+    done
+    
+    # Close the auto-generated section
+    echo "$end_marker" >> "$temp_file"
+
+    # Replace only the section between markers
+    # Extract content before and after markers
+    awk "/$start_marker/,/$end_marker/{next}1" "$aliases_file" > "${aliases_file}.tmp"
+    
+    # Find the line number where to insert the new section
+    local insert_line=$(grep -n "$start_marker" "$aliases_file" | head -1 | cut -d: -f1)
+    if [ -n "$insert_line" ]; then
+        insert_line=$((insert_line - 1))
+    else
+        insert_line=$(wc -l < "$aliases_file")
+    fi
+    
+    # Insert the new auto-generated section
+    head -n "$insert_line" "${aliases_file}.tmp" > "${aliases_file}.new"
+    cat "$temp_file" >> "${aliases_file}.new"
+    tail -n +$((insert_line + 1)) "${aliases_file}.tmp" >> "${aliases_file}.new"
+    
+    mv "${aliases_file}.new" "$aliases_file"
+    rm -f "${aliases_file}.tmp" "$temp_file"
+    
+    echo -e "${GREEN}✅ Updated dynamic aliases from config.yaml${NC}"
+    echo -e "${BLUE}💡 Reload your shell or run: source $aliases_file${NC}"
+}
+
+run_claude_with_model() {
+    local model="$1"
+    
+    echo -e "${BLUE}🔧 Preparing to run Claude Code with ${model}${NC}"
+    
+    # Check if proxy is running, start if not
+    if ! curl -s http://localhost:4000/health/liveliness > /dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️  LiteLLM proxy is not running${NC}"
+        echo -e "${BLUE}🚀 Starting proxy automatically...${NC}"
+        proxy_start
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}❌ Failed to start proxy${NC}"
+            return 1
+        fi
+        
+        # Wait for proxy to be ready
+        if ! wait_for_proxy_health 10 "Proxy"; then
+            echo -e "${RED}❌ Proxy started but is not responding${NC}"
+            return 1
+        fi
+    fi
+    
+    # Verify model availability by checking against config.yaml
+    local full_name=$(get_full_model_name "$model")
+    if [ -n "$full_name" ]; then
+        echo -e "${BLUE}📋 Verifying model '$model ($full_name)' is available...${NC}"
+    else
+        echo -e "${BLUE}📋 Verifying model '$model' is available...${NC}"
+    fi
+    
+    # Verify model exists in config.yaml
+    if ! get_model_names_from_config | grep -q "^${model}$"; then
+        echo -e "${RED}❌ Model '$model' not found in configured models${NC}"
+        echo -e "${YELLOW}💡 Available models:${NC}"
+        list_models
+        return 1
+    fi
+    
+    # Export environment variables for this session only
+    export ANTHROPIC_AUTH_TOKEN="sk-4"
+    export ANTHROPIC_BASE_URL="http://localhost:4000"
+    export ANTHROPIC_MODEL="$model"
+    
+    if [ -n "$full_name" ]; then
+        echo -e "${GREEN}🚀 Starting Claude Code with model: $model ($full_name)${NC}"
+    else
+        echo -e "${GREEN}🚀 Starting Claude Code with model: $model${NC}"
+    fi
+    echo -e "${BLUE}🔗 Connected to proxy at: http://localhost:4000${NC}"
+    if [ -n "$full_name" ]; then
+        echo -e "${GRAY}☁️  Configured to use local proxy with $model → $full_name${NC}"
+    else
+        echo -e "${GRAY}☁️  Configured to use local proxy with $model${NC}"
+    fi
+    
+    # Launch Claude Code with the exported variables
+    claude "${@:2}"
+    
+    # Clean up environment variables after Claude Code exits
+    unset ANTHROPIC_AUTH_TOKEN
+    unset ANTHROPIC_BASE_URL
+    unset ANTHROPIC_MODEL
+}
+
+# Main command parser
+case "${1:-}" in
+    --start|-s)
+        proxy_start
+        ;;
+    --stop|-x)
+        proxy_stop
+        ;;
+    --restart|-r)
+        proxy_restart
+        ;;
+    --status|-t)
+        proxy_status
+        ;;
+    --logs|-l)
+        proxy_logs
+        ;;
+    --run|-m)
+        if [ -z "$2" ]; then
+            echo -e "${RED}❌ Model name required${NC}"
+            echo -e "${YELLOW}💡 Usage: llmoxy --run MODEL${NC}"
+            echo -e "${YELLOW}📋 Available models:${NC}"
+            list_models
+            exit 1
+        fi
+        run_claude_with_model "$2" "${@:3}"
+        ;;
+    --list-models)
+        list_models
+        ;;
+    --generate-aliases)
+        generate_aliases
+        ;;
+    --version|-v)
+        echo "llmoxy version $VERSION"
+        ;;
+    --help|-h)
+        show_help
+        ;;
+    "")
+        echo -e "${YELLOW}⚠️  No command specified${NC}"
+        echo ""
+        show_help
+        exit 1
+        ;;
+    *)
+        echo -e "${RED}❌ Unknown command: $1${NC}"
+        echo ""
+        show_help
+        exit 1
+        ;;
+esac

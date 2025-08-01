@@ -1,0 +1,27 @@
+#!/bin/bash
+# Convenience aliases for llmoxy
+# Add this to your ~/.bashrc or ~/.zshrc: source ~/llmoxy/aliases.sh
+
+# Get the directory where this script is located
+LLMOXY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Add llmoxy to PATH if not already there
+if [[ ":$PATH:" != *":$LLMOXY_DIR:"* ]]; then
+    export PATH="$LLMOXY_DIR:$PATH"
+fi
+
+# Proxy management shortcuts
+alias llmoxy-start='llmoxy --start'
+alias llmoxy-stop='llmoxy --stop'
+alias llmoxy-status='llmoxy --status'
+alias llmoxy-logs='llmoxy --logs'
+alias llmoxy-restart='llmoxy --restart'
+alias llmoxy-aliases='llmoxy --generate-aliases'
+
+# BEGIN AUTO-GENERATED ALIASES
+# Dynamic model aliases are automatically updated from config.yaml
+alias kimi='llmoxy --run kimi'
+alias kimi-turbo='llmoxy --run kimi-turbo'
+alias dsr1='llmoxy --run dsr1'
+alias qwen='llmoxy --run qwen'
+# END AUTO-GENERATED ALIASES
